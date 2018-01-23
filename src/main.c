@@ -4,12 +4,12 @@
 #include "uart_print.h"
 
 /* Timer frequency (unit: Hz). With SysClk set to 32MHz, timer frequency TIMER_FREQUENCY_HZ range is min=1Hz, max=32.719kHz. */
-#define TIMER_FREQUENCY_HZ          4000
+#define TIMER_FREQUENCY_HZ          4
 
 /* ADC parameters */
 /* Size of array containing ADC converted values: set to ADC sequencer number of ranks converted, to have a rank in each address */
 #define ADC_CHANNELS 4
-#define ADC_CONVERSIONS_BUFFER_SIZE 200
+#define ADC_CONVERSIONS_BUFFER_SIZE 4
 
 /**
   * @brief  Computation of voltage (unit: mV) from ADC measurement digital
@@ -97,6 +97,8 @@ int main(void)
     Error_Handler(1);
   }
 
+  uart_print(snprintf(buffer,STRING_LENGTH, "\r\nADC Sequencer:\r\n"));
+
   for (;;) {
     while (ubSequenceCompleted == RESET) {}
 ////      uhADCChannelToDAC_mVolt    = COMPUTATION_DIGITAL_12BITS_TO_VOLTAGE(aADCxConvertedValues[0]);
@@ -110,11 +112,11 @@ int main(void)
 //        voltage = VOLTAGE_12B(voltage);
 
 //    for(int frame = 0; frame < ADC_CONVERSIONS_BUFFER_SIZE; frame += 4) {
-//      uart_print(snprintf(buffer, STRING_LENGTH, "V(a0) = %04d, V(a1) = %04d, V(a2) = %04d, V(a3) = %04d\r\n",
-//                          VOLTAGE_12B(aADCxConvertedValues[frame]),
-//                          VOLTAGE_12B(aADCxConvertedValues[frame + 1]),
-//                          VOLTAGE_12B(aADCxConvertedValues[frame + 2]),
-//                          VOLTAGE_12B(aADCxConvertedValues[frame + 3])));
+      uart_print(snprintf(buffer, STRING_LENGTH, "V(a0) = %04d, V(a1) = %04d, V(a2) = %04d, V(a3) = %04d\r",
+                          VOLTAGE_12B(aADCxConvertedValues[0]),
+                          VOLTAGE_12B(aADCxConvertedValues[1]),
+                          VOLTAGE_12B(aADCxConvertedValues[2]),
+                          VOLTAGE_12B(aADCxConvertedValues[3])));
 //    }
 
 
@@ -149,13 +151,12 @@ void SystemClock_Config(void)
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
 
   /* Enable HSE Oscillator and Activate PLL with HSE as source */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
-  RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
-  RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL6;
-  RCC_OscInitStruct.PLL.PLLDIV = RCC_PLL_DIV3;
+  RCC_OscInitStruct.OscillatorType      = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.HSEState            = RCC_HSE_ON;
+  RCC_OscInitStruct.PLL.PLLState        = RCC_PLL_ON;
+  RCC_OscInitStruct.PLL.PLLSource       = RCC_PLLSOURCE_HSE;
+  RCC_OscInitStruct.PLL.PLLMUL          = RCC_PLL_MUL6;
+  RCC_OscInitStruct.PLL.PLLDIV          = RCC_PLL_DIV3;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK) {
     /* Initialization Error */
     while (1);
@@ -249,7 +250,7 @@ static void ADC_Config(void)
   AdcHandle.Init.ContinuousConvMode = DISABLE;                     /* Continuous mode disabled to have only 1 rank converted at each conversion trig, and because discontinuous mode is enabled */
   AdcHandle.Init.NbrOfConversion = ADC_CHANNELS; /* Sequencer of regular group will convert the 4 first ranks: rank1, rank2, rank3, rank4 */
   AdcHandle.Init.DiscontinuousConvMode = ENABLE;                   /* Sequencer of regular group will convert the sequence in several sub-divided sequences */
-  AdcHandle.Init.NbrOfDiscConversion = 1;                          /* Sequencer of regular group will convert ranks one by one, at each conversion trig */
+  AdcHandle.Init.NbrOfDiscConversion = ADC_CHANNELS;                          /* Sequencer of regular group will convert ranks one by one, at each conversion trig */
   AdcHandle.Init.ExternalTrigConv = ADC_EXTERNALTRIGCONV_Tx_TRGO;  /* Trig of conversion start done by external event */
   AdcHandle.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_RISING;
   AdcHandle.Init.DMAContinuousRequests = ENABLE;
